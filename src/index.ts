@@ -75,12 +75,16 @@ server.registerTool(
   "arc_list_tabs",
   {
     title: "List Arc Tabs",
-    description: "List tabs in the front Arc window (AppleScript).",
-    inputSchema: z.object({}),
+    description:
+      "List tabs in the front Arc window (AppleScript). Defaults to the first 100 tabs to stay within output limits; pass a higher limit or a location filter to narrow results.",
+    inputSchema: z.object({
+      limit: z.number().int().min(1).max(1000).default(100),
+      location: z.enum(["topApp", "pinned", "unpinned"]).optional(),
+    }),
   },
-  async () => {
+  async ({ limit, location }) => {
     try {
-      const tabs = await listTabsInFrontWindow();
+      const tabs = await listTabsInFrontWindow({ limit, location });
       return {
         content: [{ type: "text", text: JSON.stringify(tabs, null, 2) }],
         structuredContent: { tabs },

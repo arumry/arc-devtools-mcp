@@ -63,15 +63,19 @@ export async function listSpaces(): Promise<ArcSpace[]> {
 tell application "Arc"
   tell front window
     set out to ""
-    set n to count of spaces
-    repeat with i from 1 to n
-      set sp to item i of spaces
-      set sid to get id of sp
-      set stitle to my __escape_json(get title of sp)
-      set out to (out & "{ \\\"id\\\": \\\"" & sid & "\\\", \\\"title\\\": \\\"" & stitle & "\\\" }")
-      if i < n then
-        set out to (out & ",")
-      end if
+    set firstItem to true
+    repeat with sp in spaces
+      try
+        set sid to id of sp
+        set stitle to my __escape_json(title of sp)
+        set itemJson to ("{ \\\"id\\\": \\\"" & sid & "\\\", \\\"title\\\": \\\"" & stitle & "\\\" }")
+        if firstItem then
+          set out to (out & itemJson)
+          set firstItem to false
+        else
+          set out to (out & "," & itemJson)
+        end if
+      end try
     end repeat
     return "[" & out & "]"
   end tell
@@ -93,7 +97,12 @@ end tell`;
   await runAppleScript(script);
 }
 
-export async function listTabsInFrontWindow(): Promise<ArcTab[]> {
+export type ListTabsOptions = {
+  limit?: number;
+  location?: ArcTabLocation;
+};
+
+export async function listTabsInFrontWindow(options: ListTabsOptions = {}): Promise<ArcTab[]> {
   const script = `${JSON_ESCAPE_FN}
 tell application "Arc"
   tell front window
@@ -123,7 +132,14 @@ end tell
 `;
 
   const raw = await runAppleScript(script);
-  return JSON.parse(raw) as ArcTab[];
+  let tabs = JSON.parse(raw) as ArcTab[];
+  if (options.location) {
+    tabs = tabs.filter((t) => t.location === options.location);
+  }
+  if (typeof options.limit === "number") {
+    tabs = tabs.slice(0, options.limit);
+  }
+  return tabs;
 }
 
 export async function getActiveTabInFrontWindow(): Promise<ArcTab> {
